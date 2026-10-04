@@ -1,0 +1,3 @@
+include .env.example AGENTS.md
+recursive-include examples *.rb
+recursive-include tests *.py
