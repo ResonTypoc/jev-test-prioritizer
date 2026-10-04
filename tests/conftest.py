@@ -19,5 +19,6 @@ def result():
         behavioral_value=DimensionEvaluation(2.7, 0.91, {"0": 0.0, "1": 0.0, "2": 0.3, "3": 0.7}),
         regression_protection=DimensionEvaluation(3.0, 0.88, {"0": 0.0, "1": 0.0, "2": 0.0, "3": 1.0}),
         implementation_coupling=DimensionEvaluation(0.0, 0.86, {"0": 1.0, "1": 0.0, "2": 0.0, "3": 0.0}),
+        specification_alignment=DimensionEvaluation(2.8, 0.9, {"0": 0.0, "1": 0.0, "2": 0.2, "3": 0.8}),
         decision=DecisionEvaluation("keep", 0.93, {"keep": 0.9, "review": 0.08, "remove": 0.02}),
     )

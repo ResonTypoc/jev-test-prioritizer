@@ -52,6 +52,7 @@ class TestEvaluation:
     behavioral_value: DimensionEvaluation
     regression_protection: DimensionEvaluation
     implementation_coupling: DimensionEvaluation
+    specification_alignment: DimensionEvaluation
     decision: DecisionEvaluation
 
     def to_dict(self) -> dict:

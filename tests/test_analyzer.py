@@ -44,6 +44,16 @@ def test_real_sdk_with_mock_transport(monkeypatch, result):
         assert set(questions) == set(result.to_dict())
         assert all(len(questions[name]["criteria"]) == 4 for name in questions if name != "decision")
         assert set(questions["decision"]["criteria"]) == {"keep", "review", "remove"}
+        alignment = questions["specification_alignment"]
+        assert alignment["type"] == "score"
+        assert alignment["criteria"] == [
+            "Contradicts the stated intended behavior",
+            "Weakly, ambiguously, or questionably aligned",
+            "Substantially aligned with the intended behavior",
+            "Clearly validates the intended behavior",
+        ]
+        assert "context as the primary source of intended requirements" in alignment["instructions"]
+        assert "use the weakly or ambiguously aligned level and reduce confidence" in alignment["instructions"]
         assert "Higher is worse" in questions["implementation_coupling"]["instructions"]
         assert "assertion count" in questions["behavioral_value"]["instructions"]
         for question in questions.values():
@@ -55,6 +65,49 @@ def test_real_sdk_with_mock_transport(monkeypatch, result):
     actual = analyzer.evaluate_test("source", "test", "requirement")
     assert actual.to_dict() == result.to_dict()
     assert len(requests) == 1
+
+
+def test_decision_guidance_does_not_assume_implementation_is_correct():
+    decision = analyzer._questions()["decision"]
+    instructions = decision.instructions
+    assert "Do not treat production source as ground truth" in instructions
+    assert "AI-generated implementation error" in instructions
+    assert "Agreement between the candidate test and production source is not sufficient evidence for keep" in instructions
+    assert "context as the primary source of intended requirements" in instructions
+    assert (
+        "A test that encodes behavior contrary to the stated requirement must not be "
+        "recommended for retention merely because production source currently behaves that way"
+    ) in instructions
+    assert "Missing specification context should reduce confidence and may justify review" in instructions
+    assert (
+        "If insufficient independent information establishes whether the test matches the "
+        "intended behavior, prefer review rather than assuming the current implementation is correct"
+    ) in instructions
+    assert "independently established intended behavior" in decision.criteria["keep"]
+    assert "insufficient independent requirement information" in decision.criteria["review"]
+
+
+@pytest.mark.parametrize("fault", [
+    "missing", "wrong_type", "missing_score", "score", "confidence", "probabilities",
+])
+def test_malformed_specification_alignment(monkeypatch, result, fault):
+    data = payload(result)
+    answer = data["answers"]["specification_alignment"]
+    if fault == "missing":
+        del data["answers"]["specification_alignment"]
+    elif fault == "wrong_type":
+        data["answers"]["specification_alignment"] = {"type": "noul", "noul": 0.5}
+    elif fault == "missing_score":
+        del answer["score"]
+    elif fault == "score":
+        answer["score"] = 4.0
+    elif fault == "confidence":
+        answer["confidence"] = -0.1
+    else:
+        answer["probabilities"] = {"0": 1.0}
+    install_transport(monkeypatch, lambda request: httpx2.Response(200, json=data))
+    with pytest.raises(analyzer.EvaluationError):
+        analyzer.evaluate_test("source", "test", "intended behavior")
 
 
 @pytest.mark.parametrize("source,test,message", [(" \n", "test", "Source"), ("source", "\t", "Test")])

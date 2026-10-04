@@ -28,6 +28,7 @@ def _human_output(result: TestEvaluation) -> str:
         ("Behavioral value", result.behavioral_value),
         ("Regression protection", result.regression_protection),
         ("Implementation coupling", result.implementation_coupling),
+        ("Specification alignment", result.specification_alignment),
     ):
         rows.append(f"{label:<24} {dimension.score:g} / 3 (confidence {dimension.confidence:.2f})")
     rows.extend([

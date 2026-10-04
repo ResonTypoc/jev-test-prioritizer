@@ -7,7 +7,14 @@ from jev_test_prioritizer.models import DecisionEvaluation, DimensionEvaluation
 
 def test_serialization(result):
     data = json.loads(json.dumps(result.to_dict(), allow_nan=False))
-    assert set(data) == {"behavioral_value", "regression_protection", "implementation_coupling", "decision"}
+    assert set(data) == {
+        "behavioral_value", "regression_protection", "implementation_coupling",
+        "specification_alignment", "decision",
+    }
+    assert data["specification_alignment"] == {
+        "score": 2.8, "confidence": 0.9,
+        "probabilities": {"0": 0.0, "1": 0.0, "2": 0.2, "3": 0.8},
+    }
     assert data["behavioral_value"] == {
         "score": 2.7, "confidence": 0.91,
         "probabilities": {"0": 0.0, "1": 0.0, "2": 0.3, "3": 0.7},

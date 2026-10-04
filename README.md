@@ -33,7 +33,7 @@ the process environment and does not load `.env` files. Never commit credentials
 The only direct runtime dependency is the official
 [TypeSafe Python SDK](https://github.com/typesafe-ai/typesafe-sdk-python).
 The integration was checked against `typesafe-sdk` 0.7.2 and uses
-`TypeSafeClient.system_one` with three `Score` questions and one `Choice` question.
+`TypeSafeClient.system_one` with four `Score` questions and one `Choice` question.
 The SDK's default model is `jev-latest`; its standard environment configuration
 also applies. See the [official SDK documentation](https://docs.typesafe.ai/sdk/python).
 
@@ -55,7 +55,7 @@ jev-test-prioritizer evaluate \
 intended behavior, requirement, bug, invariant, or implementation task. The tool
 does not inspect the repository or discover related files.
 
-Default output displays the three scores, their confidence, and the decision:
+Default output displays the four scores, their confidence, and the decision:
 
 ```text
 Test retention evaluation
@@ -63,6 +63,7 @@ Test retention evaluation
 Behavioral value         2.7 / 3 (confidence 0.91)
 Regression protection    3 / 3 (confidence 0.88)
 Implementation coupling  0 / 3 (confidence 0.86)
+Specification alignment  2.8 / 3 (confidence 0.90)
 
 Decision                 KEEP
 Confidence               0.93
@@ -101,6 +102,11 @@ fields (illustrative values):
     "confidence": 0.86,
     "probabilities": {"0": 1.0, "1": 0.0, "2": 0.0, "3": 0.0}
   },
+  "specification_alignment": {
+    "score": 2.8,
+    "confidence": 0.9,
+    "probabilities": {"0": 0.0, "1": 0.0, "2": 0.2, "3": 0.8}
+  },
   "decision": {
     "value": "keep",
     "confidence": 0.93,
@@ -109,7 +115,9 @@ fields (illustrative values):
 }
 ```
 
-Each dimension has a numeric `score` in `[0, 3]`, a numeric `confidence` in `[0, 1]`,
+The four dimension fields are `behavioral_value`, `regression_protection`,
+`implementation_coupling`, and `specification_alignment`. Each has a numeric
+`score` in `[0, 3]`, a numeric `confidence` in `[0, 1]`,
 and a `probabilities` object with exactly the string keys `"0"` through `"3"`.
 The decision has a `value` of `keep`, `review`, or `remove`, its SDK `confidence`,
 and probabilities for all three alternatives. Probability values are in `[0, 1]`
@@ -135,6 +143,7 @@ error bodies are not printed, to avoid exposing supplied code or credentials.
 | Behavioral value | Trivial or none | Weak | Meaningful | Important behavioral contract |
 | Regression protection | Almost none | Limited | Useful | Strong |
 | Implementation coupling (higher is worse) | Behavior-focused | Mild | Substantial | Primarily implementation details |
+| Specification alignment | Contradicts stated intended behavior | Weakly, ambiguously, or questionably aligned | Substantially aligned with intended behavior | Clearly validates intended behavior |
 
 Behavioral value concerns observable behavior, business rules, contracts,
 invariants, edge cases, and failure modes that callers or users depend on.
@@ -143,7 +152,22 @@ whether plausible incorrect implementations could still pass. Implementation
 coupling considers brittle assertions about private methods, internal call counts,
 object structure, or incidental sequences. Mocking itself is not considered bad.
 
-- **keep:** enough durable behavioral or regression value to justify maintenance.
+Specification alignment uses supplied context as the primary source of intended
+requirements when available. Production source is not ground truth: an AI-generated
+implementation and its generated test can agree while both violate the requirement.
+Their agreement alone is insufficient evidence for `keep`. A test that encodes
+behavior contrary to the stated requirement must not be retained merely because
+the implementation currently behaves that way.
+
+Without enough independent requirement information, Jev is instructed to use the
+weakly or ambiguously aligned level, reduce confidence, and prefer `review` rather
+than assume the implementation is correct. Missing specification context represents
+uncertainty, not a known contradiction. Confidence and probabilities still come
+directly from Jev; the application does not fabricate or adjust them.
+
+- **keep:** enough durable behavioral or regression value to justify maintenance,
+  supported by independently established intended behavior and not contrary to the
+  stated requirement.
 - **review:** ambiguous value, missing context, or a test that may warrant improvement.
 - **remove:** little durable value relative to maintenance cost, trivial implementation
   details, or another reason it does not justify retention.
@@ -199,6 +223,8 @@ detection, or mutation testing. Existing coverage or redundancy must not be
 assumed unless explicitly supplied in context, and the tool cannot establish that
 other tests cover a behavior after removal. It does not execute candidate code.
 AI judgments can be wrong and may vary across model versions or calls.
+Specification alignment depends on the supplied requirement information; missing
+or ambiguous context limits confidence in the recommendation.
 
 Install and run this CLI project's own tests:
 

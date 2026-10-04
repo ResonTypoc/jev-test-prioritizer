@@ -34,6 +34,7 @@ def test_json_output(monkeypatch, capsys, inputs, result):
     assert cli.main(args(inputs) + ["--json", "--context", "intended behavior"]) == 0
     output = capsys.readouterr()
     assert json.loads(output.out) == result.to_dict()
+    assert json.loads(output.out)["specification_alignment"]["score"] == 2.8
     assert output.err == ""
     assert received == [("production code", "candidate test", "intended behavior")]
 
@@ -46,7 +47,8 @@ def test_human_output(monkeypatch, capsys, inputs, result):
         "Test retention evaluation\n\n"
         "Behavioral value         2.7 / 3 (confidence 0.91)\n"
         "Regression protection    3 / 3 (confidence 0.88)\n"
-        "Implementation coupling  0 / 3 (confidence 0.86)\n\n"
+        "Implementation coupling  0 / 3 (confidence 0.86)\n"
+        "Specification alignment  2.8 / 3 (confidence 0.90)\n\n"
         "Decision                 KEEP\n"
         "Confidence               0.93\n"
     )
